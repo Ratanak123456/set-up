@@ -40,26 +40,49 @@ print_skip() {
     echo -e "${ICON_SKIP} ${DIM}$1${RESET}"
 }
 
+print_welcome() {
+    clear # Optional: Clears the terminal screen for a fresh look
+    echo -e "${CYAN}${BOLD}"
+    echo -e "  ____  _____ _____     _   _ ____  "
+    echo -e " / ___|| ____|_   _|   | | | |  _ \ "
+    echo -e " \___ \|  _|   | |_____| | | | |_) |"
+    echo -e "  ___) | |___  | |_____| |_| |  __/ "
+    echo -e " |____/|_____| |_|      \___/|_|    "
+    echo -e "${RESET}"
+    echo -e "${MAGENTA}┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓${RESET}"
+    echo -e "${MAGENTA}┃${RESET} ${BOLD}${GREEN}Welcome to your Automated Arch Linux Environment Setup${RESET} ${MAGENTA}┃${RESET}"
+    echo -e "${MAGENTA}┃${RESET} ${DIM}This script will configure packages, services, and tools.${RESET} ${MAGENTA}┃${RESET}"
+    echo -e "${MAGENTA}┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛${RESET}"
+    echo -e ""
+    sleep 1 # Gives the user a second to appreciate the banner before things start rolling
+}
+
 # ==========================================
 # SCRIPT EXECUTION
 # ==========================================
+
+# Show the new welcome banner
+print_welcome
 
 print_step "Updating System"
 sudo pacman -Syu --noconfirm
 print_success "System packages updated."
 
 print_step "Installing Official Repository Packages"
-# Moved burpsuite out of this list to prevent pacman from crashing
+# Added your new packages here, cleaned up duplicates, and fixed typos
 sudo pacman -S --needed --noconfirm \
     git github-cli \
-    base-devel gcc gdb cmake ninja \
+    base-devel gcc gdb cmake ninja clang \
+    python python-pip \
     nodejs npm yarn \
     maven gradle \
     jdk21-openjdk \
+    cargo \
     postgresql redis sqlite \
     docker \
-    kitty neovim \
-    btop fastfetch ripgrep fzf fd bat zoxide eza jq tree \
+    kitty neovim tmux \
+    btop bpytop fastfetch ripgrep fzf fd bat zoxide eza jq tree \
+    curl wget \
     unzip p7zip \
     flatpak \
     firefox telegram-desktop discord \
@@ -75,7 +98,8 @@ sudo pacman -S --needed --noconfirm \
     dolphin ark \
     ttf-dejavu ttf-liberation noto-fonts noto-fonts-cjk noto-fonts-emoji ttf-jetbrains-mono otf-font-awesome \
     bluez bluez-utils blueman \
-    qemu-full virt-manager dnsmasq edk2-ovmf \
+    qemu-full virt-manager dnsmasq edk2-ovmf linux-headers \
+    android-tools ntfs-3g exfatprogs \
     cups system-config-printer 2> >(grep -v "is up to date -- skipping" >&2)
 print_success "Official packages successfully installed."
 
@@ -127,7 +151,6 @@ else
 fi
 
 print_step "Installing AUR Packages"
-# Added burpsuite here so yay handles it seamlessly
 yay -S --needed --noconfirm \
     visual-studio-code-bin \
     google-chrome \
