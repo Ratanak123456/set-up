@@ -41,20 +41,24 @@ print_skip() {
 }
 
 print_welcome() {
-    clear # Optional: Clears the terminal screen for a fresh look
-    echo -e "${CYAN}${BOLD}"
-    echo -e "  ____  _____ _____     _   _ ____  "
-    echo -e " / ___|| ____|_   _|   | | | |  _ \ "
-    echo -e " \___ \|  _|   | |_____| | | | |_) |"
-    echo -e "  ___) | |___  | |_____| |_| |  __/ "
-    echo -e " |____/|_____| |_|      \___/|_|    "
+    clear
+    echo -e "${CYAN}"
+    cat << "EOF"
+█▀▀▀▀▀▀▀▀▀▀▓   ▄▀▀▀▀▀▀▀▀▀█ █▀▀▀▀▀▀▀▀▀▀█ █▀▀▀▀█ ▓▀▀▀█ █▀▀▀▀▀▀▀▀▀▄
+▀    ▄▄▄ ∙ ▒ █·    ▄▄▄▄▄▄█ █▄▄▄·    ▄▄▄█ ▀    ▓ ▒.  █ ▀    ▄▄  ∙ █
+▓    ▓ ▀▀▀▀▀ ▓   . ▓▄▄▄▄▄▄    ▓   . ▓    ▓    ▓ ▒   ▓ ▓    ▓▄▌   ▓
+░▄▄▄ ▀▀▀▀▀▀▒ ▒ ∙  ▄▄▄▄▄▄▒    ▒ ∙  ▒    ▒   · ▒ ▓   ▒ ▒   ·▄▄▄▄▄▀
+▄▄▄▄▄  ▒  .░ ░    ░▄▄▄▄▄▄    ░    ░    ░    ░▄░·. ░ ░ .  ░       
+▓    ▀▀▀▀∙  █ █    .    ·█    █    █    █    .       █ █    █      
+░▄▄▄▄▄▄▄▄▄▄█ █▄▄▄▄▄▄▄▄▄▄█    █▄▄▄▄█    █▄▄▄▄▄▄▄▄▄▄█ █▄▄▄▄█      
+EOF
     echo -e "${RESET}"
     echo -e "${MAGENTA}┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓${RESET}"
     echo -e "${MAGENTA}┃${RESET} ${BOLD}${GREEN}Welcome to your Automated Arch Linux Environment Setup${RESET} ${MAGENTA}┃${RESET}"
     echo -e "${MAGENTA}┃${RESET} ${DIM}This script will configure packages, services, and tools.${RESET} ${MAGENTA}┃${RESET}"
     echo -e "${MAGENTA}┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛${RESET}"
     echo -e ""
-    sleep 1 # Gives the user a second to appreciate the banner before things start rolling
+    sleep 1
 }
 
 # ==========================================
@@ -69,7 +73,6 @@ sudo pacman -Syu --noconfirm
 print_success "System packages updated."
 
 print_step "Installing Official Repository Packages"
-# Added your new packages here, cleaned up duplicates, and fixed typos
 sudo pacman -S --needed --noconfirm \
     git github-cli \
     base-devel gcc gdb cmake ninja clang \
