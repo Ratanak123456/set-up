@@ -160,6 +160,8 @@ yay -S --needed --noconfirm \
     brave-bin \
     postman-bin \
     pnpm-bin \
+    docker-desktop \
+    jetbrains-toolbox \
     burpsuite 2> >(grep -v "is up to date -- skipping" >&2)
 print_success "AUR packages successfully installed."
 
