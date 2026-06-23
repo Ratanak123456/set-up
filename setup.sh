@@ -43,7 +43,7 @@ print_welcome() {
  \ \ \ \ \ \ \ /'__`\ \ \   /'___\ / __`\/' __` __`\  /'__`\       \ \ \  / __`\     \/_\__ \\ \  _\L  \ \ \  ______\ \ \ \ \ \ ,__/
   \ \ \_/ \_\ /\  __/\_\ \_/\ \__//\ \L\ /\ \/\ \/\ \/\  __/        \ \ \/\ \L\ \      /\ \L\ \ \ \L\ \ \ \ \/\______\ \ \_\ \ \ \/ 
    \ `\___x___\ \____/\____\ \____\ \____\ \_\ \_\ \_\ \____\        \ \_\ \____/      \ `\____\ \____/  \ \_\/______/\ \_____\ \_\ 
-    '\/__//__/ \/____\/____/\/____/\/___/ \/_/\/_/\/_/\/____/         \/_/\/___/        \/_____/\/___/    \/_/         \/_____/\/_/ 
+    '\/__//__/ \/____\/____/\/____/\/___/ \/_/\/_/\/_/\/____/         \/_/\/___/        \/_____/\/___/    \/_/         \/_____/\/_/
 EOF
     echo -e "${RESET}"
     echo -e "  ${GRAY}Automated Development Environment Setup  •  $(date '+%Y-%m-%d %H:%M')${RESET}"
@@ -142,7 +142,6 @@ declare -A PKG_GROUPS=(
     ["Wayland/Hyprland"]="waybar hyprpaper dunst wl-clipboard grim slurp xdg-desktop-portal-hyprland"
     ["Audio"]="pipewire wireplumber pavucontrol playerctl"
     ["Filesystem"]="thunar dolphin ark"
-    ["Fonts"]="ttf-dejavu ttf-liberation noto-fonts noto-fonts-cjk noto-fonts-emoji ttf-jetbrains-mono otf-font-awesome"
     ["Bluetooth"]="bluez bluez-utils blueman brightnessctl"
     ["Virtualization"]="qemu-full virt-manager dnsmasq edk2-ovmf linux-headers"
     ["Hardware"]="android-tools ntfs-3g exfatprogs"
@@ -155,9 +154,9 @@ current=0
 for group in "${!PKG_GROUPS[@]}"; do
     current=$((current + 1))
     printf "\n    ${CYAN}${BOLD}%s${RESET} ${GRAY}(%d/%d)${RESET}\n" "$group" "$current" "$total_groups"
-    
+
     read -ra pkgs <<< "${PKG_GROUPS[$group]}"
-    
+
     for pkg in "${pkgs[@]}"; do
         printf "      ${GRAY}Installing ${WHITE}%s${GRAY}...${RESET}" "$pkg"
         if pacman -Q "$pkg" &>/dev/null; then
@@ -171,6 +170,26 @@ for group in "${!PKG_GROUPS[@]}"; do
         fi
     done
 done
+
+# ==========================================
+# FONTS
+# ==========================================
+
+print_section "FONTS" "🔤"
+
+print_step "Installing Noto fonts, DejaVu, Liberation, and fontconfig"
+if sudo pacman -S --needed --noconfirm noto-fonts noto-fonts-emoji noto-fonts-cjk ttf-dejavu ttf-liberation fontconfig >/dev/null 2>&1; then
+    print_success
+else
+    print_error
+fi
+
+print_step "Installing JetBrains Mono, Fira Code, and Ubuntu fonts"
+if sudo pacman -S --needed --noconfirm ttf-jetbrains-mono ttf-fira-code ttf-ubuntu-font-family >/dev/null 2>&1; then
+    print_success
+else
+    print_error
+fi
 
 # ==========================================
 # SERVICES
@@ -269,6 +288,8 @@ declare -a AUR_PKGS=(
     "docker-desktop:Container GUI"
     "jetbrains-toolbox:IDE manager"
     "burpsuite:Security testing"
+    "ttf-ms-fonts:Microsoft core fonts"
+    "ttf-nerd-fonts-symbols:Nerd font symbols"
 )
 
 for pkg in "${AUR_PKGS[@]}"; do
@@ -331,13 +352,27 @@ print_success
 echo
 echo -e "${GREEN}${BOLD}"
 cat << "EOF"
- ____    _____   _____   ____    ____    __    __ ____      
-/\  _`\ /\  __`\/\  __`\/\  _`\ /\  _`\ /\ \  /\ /\  _`\    
-\ \ \L\_\ \ \/\ \ \ \/\ \ \ \/\ \ \ \L\ \ `\`\\/'\ \ \L\_\  
- \ \ \L_L\ \ \ \ \ \ \ \ \ \ \ \ \ \  _ <`\ `\ /' \ \  _\L  
-  \ \ \/, \ \ \_\ \ \ \_\ \ \ \_\ \ \ \L\ \`\ \ \  \ \ \L\ \
-   \ \____/\ \_____\ \_____\ \____/\ \____/  \ \_\  \ \____/
-    \/___/  \/_____/\/_____/\/___/  \/___/    \/_/   \/___/ 
+          _____                  _______                 _______                  _____                   _____            _____                   _____          
+         /\    \                /::\    \               /::\    \                /\    \                 /\    \          |\    \                 /\    \         
+        /::\    \              /::::\    \             /::::\    \              /::\    \               /::\    \         |:\____\               /::\    \        
+       /::::\    \            /::::::\    \           /::::::\    \            /::::\    \             /::::\    \        |::|   |              /::::\    \       
+      /::::::\    \          /::::::::\    \         /::::::::\    \          /::::::\    \           /::::::\    \       |::|   |             /::::::\    \      
+     /:::/\:::\    \        /:::/~~\:::\    \       /:::/~~\:::\    \        /:::/\:::\    \         /:::/\:::\    \      |::|   |            /:::/\:::\    \     
+    /:::/  \:::\    \      /:::/    \:::\    \     /:::/    \:::\    \      /:::/  \:::\    \       /:::/__\:::\    \     |::|   |           /:::/__\:::\    \    
+   /:::/    \:::\    \    /:::/    / \:::\    \   /:::/    / \:::\    \    /:::/    \:::\    \     /::::\   \:::\    \    |::|   |          /::::\   \:::\    \   
+  /:::/    / \:::\    \  /:::/____/   \:::\____\ /:::/____/   \:::\____\  /:::/    / \:::\    \   /::::::\   \:::\    \   |::|___|______   /::::::\   \:::\    \  
+ /:::/    /   \:::\ ___\|:::|    |     |:::|    |:::|    |     |:::|    |/:::/    /   \:::\ ___\ /:::/\:::\   \:::\ ___\  /::::::::\    \ /:::/\:::\   \:::\    \ 
+/:::/____/  ___\:::|    |:::|____|     |:::|    |:::|____|     |:::|    /:::/____/     \:::|    /:::/__\:::\   \:::|    |/::::::::::\____/:::/__\:::\   \:::\____\
+\:::\    \ /\  /:::|____|\:::\    \   /:::/    / \:::\    \   /:::/    /\:::\    \     /:::|____\:::\   \:::\  /:::|____/:::/~~~~/~~     \:::\   \:::\   \::/    /
+ \:::\    /::\ \::/    /  \:::\    \ /:::/    /   \:::\    \ /:::/    /  \:::\    \   /:::/    / \:::\   \:::\/:::/    /:::/    /         \:::\   \:::\   \/____/ 
+  \:::\   \:::\ \/____/    \:::\    /:::/    /     \:::\    /:::/    /    \:::\    \ /:::/    /   \:::\   \::::::/    /:::/    /           \:::\   \:::\    \     
+   \:::\   \:::\____\       \:::\__/:::/    /       \:::\__/:::/    /      \:::\    /:::/    /     \:::\   \::::/    /:::/    /             \:::\   \:::\____\    
+    \:::\  /:::/    /        \::::::::/    /         \::::::::/    /        \:::\  /:::/    /       \:::\  /:::/    /\::/    /               \:::\   \::/    /    
+     \:::\/:::/    /          \::::::/    /           \::::::/    /          \:::\/:::/    /         \:::\/:::/    /  \/____/                 \:::\   \/____/     
+      \::::::/    /            \::::/    /             \::::/    /            \::::::/    /           \::::::/    /                            \:::\    \         
+       \::::/    /              \::/____/               \::/____/              \::::/    /             \::::/    /                              \:::\____\        
+        \::/____/                ~~                      ~~                     \::/____/               \::/____/                                \::/    /        
+                                                                                 ~~                      ~~                                       \/____/         
 EOF
 echo -e "${RESET}"
 echo -e "  ${YELLOW}SETUP COMPLETE${RESET}"
