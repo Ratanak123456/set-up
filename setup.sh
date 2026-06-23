@@ -279,7 +279,7 @@ print_header "System Services Configuration"
 print_step "Enabling System Services"
 
 print_progress "Configuring Docker"
-sudo systemctl enable --now docker >/dev/null 2>&1
+sudo systemctl enable docker >/dev/null 2>&1
 sudo usermod -aG docker "$USER"
 print_done "Docker enabled and user added to docker group"
 
@@ -294,19 +294,19 @@ else
 fi
 
 print_progress "Enabling PostgreSQL service"
-sudo systemctl enable --now postgresql >/dev/null 2>&1
+sudo systemctl enable postgresql >/dev/null 2>&1
 print_done "PostgreSQL service enabled"
 
 print_progress "Enabling Bluetooth service"
-sudo systemctl enable --now bluetooth >/dev/null 2>&1
+sudo systemctl enable bluetooth >/dev/null 2>&1
 print_done "Bluetooth service enabled"
 
 print_progress "Enabling CUPS printing service"
-sudo systemctl enable --now cups >/dev/null 2>&1
+sudo systemctl enable cups >/dev/null 2>&1
 print_done "CUPS Printing service enabled"
 
 print_progress "Configuring Libvirt virtualization"
-sudo systemctl enable --now libvirtd >/dev/null 2>&1
+sudo systemctl enable libvirtd >/dev/null 2>&1
 sudo usermod -aG libvirt "$USER"
 print_done "Libvirt enabled and user added to libvirt group"
 
