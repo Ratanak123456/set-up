@@ -35,9 +35,9 @@ SPINNER_FRAMES=("⠋" "⠙" "⠹" "⠸" "⠼" "⠴" "⠦" "⠧" "⠇" "⠏")
 print_welcome() {
     clear
     echo
-    echo -e "${MAGENTA}${BOLD}"
+    echo -e "${CYAN}${BOLD}"
     cat << "EOF"
-         __      __        ___                                           ______              ____    ____    ______         __  __  ____    
+ __      __        ___                                           ______              ____    ____    ______         __  __  ____    
 /\ \  __/\ \      /\_ \                                         /\__  _\            /\  _`\ /\  _`\ /\__  _\       /\ \/\ \/\  _`\  
 \ \ \/\ \ \ \    _\//\ \     ___    ___    ___ ___      __      \/_/\ \/   ___      \ \,\L\_\ \ \L\_\/_/\ \/       \ \ \ \ \ \ \L\ \
  \ \ \ \ \ \ \ /'__`\ \ \   /'___\ / __`\/' __` __`\  /'__`\       \ \ \  / __`\     \/_\__ \\ \  _\L  \ \ \  ______\ \ \ \ \ \ ,__/
@@ -46,7 +46,7 @@ print_welcome() {
     '\/__//__/ \/____\/____/\/____/\/___/ \/_/\/_/\/_/\/____/         \/_/\/___/        \/_____/\/___/    \/_/         \/_____/\/_/ 
 EOF
     echo -e "${RESET}"
-    echo -e "        ${GRAY}$(date '+%Y-%m-%d %H:%M')${RESET}"
+    echo -e "  ${GRAY}Automated Development Environment Setup  •  $(date '+%Y-%m-%d %H:%M')${RESET}"
     echo
 }
 
@@ -217,6 +217,23 @@ else
 fi
 
 # ==========================================
+# BRAVE BROWSER
+# ==========================================
+
+print_section "BRAVE BROWSER" "🦁"
+
+print_step "Installing Brave via official install script"
+if command -v brave &>/dev/null; then
+    print_skip
+else
+    if curl -fsS https://dl.brave.com/install.sh | sh >/dev/null 2>&1; then
+        print_success
+    else
+        print_error
+    fi
+fi
+
+# ==========================================
 # YAY (AUR HELPER)
 # ==========================================
 
@@ -312,18 +329,23 @@ print_success
 # ==========================================
 
 echo
-echo -e "${MAGENTA}${BOLD}"
+echo -e "${GREEN}${BOLD}"
 cat << "EOF"
-        █▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀█
-        █      ✨  SETUP COMPLETE  ✨      █
-        █▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄█
+ ____    _____   _____   ____    ____    __    __ ____      
+/\  _`\ /\  __`\/\  __`\/\  _`\ /\  _`\ /\ \  /\ /\  _`\    
+\ \ \L\_\ \ \/\ \ \ \/\ \ \ \/\ \ \ \L\ \ `\`\\/'\ \ \L\_\  
+ \ \ \L_L\ \ \ \ \ \ \ \ \ \ \ \ \ \  _ <`\ `\ /' \ \  _\L  
+  \ \ \/, \ \ \_\ \ \ \_\ \ \ \_\ \ \ \L\ \`\ \ \  \ \ \L\ \
+   \ \____/\ \_____\ \_____\ \____/\ \____/  \ \_\  \ \____/
+    \/___/  \/_____/\/_____/\/___/  \/___/    \/_/   \/___/ 
 EOF
 echo -e "${RESET}"
-echo -e "        ${YELLOW}Please reboot or log out${RESET}"
-echo -e "        ${GRAY}for group changes to apply${RESET}"
+echo -e "  ${YELLOW}SETUP COMPLETE${RESET}"
+echo -e "  ${GRAY}Please reboot or log out for group changes to apply${RESET}"
 echo
 echo -e "  ${GRAY}Quick reference:${RESET}"
 echo -e "    ${CYAN}pacman -Qqe${RESET} ${GRAY}(official packages)${RESET}"
 echo -e "    ${CYAN}yay -Qqe${RESET} ${GRAY}(AUR packages)${RESET}"
 echo -e "    ${CYAN}flatpak list${RESET} ${GRAY}(Flatpak apps)${RESET}"
+echo -e "    ${CYAN}brave --version${RESET} ${GRAY}(Brave browser)${RESET}"
 echo
