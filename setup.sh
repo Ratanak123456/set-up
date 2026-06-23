@@ -3,10 +3,9 @@
 set -euo pipefail
 
 # ==========================================
-# UI CONFIGURATION
+# COLOR DEFINITIONS
 # ==========================================
 
-# Colors
 BOLD="\e[1m"
 DIM="\e[2m"
 RESET="\e[0m"
@@ -21,13 +20,7 @@ BLUE="\e[34m"
 WHITE="\e[97m"
 GRAY="\e[90m"
 
-# Symbols (using Unicode box-drawing for cleaner look)
-CORNER_TL="╭"
-CORNER_TR="╮"
-CORNER_BL="╰"
-CORNER_BR="╯"
-HORIZONTAL="─"
-VERTICAL="│"
+# Symbols
 ARROW="▸"
 CHECK="✓"
 SKIP="→"
@@ -35,59 +28,23 @@ WARN="!"
 BULLET="•"
 SPINNER_FRAMES=("⠋" "⠙" "⠹" "⠸" "⠼" "⠴" "⠦" "⠧" "⠇" "⠏")
 
-# Dimensions
-TERM_WIDTH=$(tput cols 2>/dev/null || echo 80)
-BOX_WIDTH=$(( TERM_WIDTH > 80 ? 70 : TERM_WIDTH - 10 ))
-
-# ==========================================
-# UTILITY FUNCTIONS
-# ==========================================
-
-center_text() {
-    local text="$1"
-    local width="${2:-$BOX_WIDTH}"
-    local padding=$(( (width - ${#text}) / 2 ))
-    printf "%*s%s%*s" "$padding" "" "$text" "$(( width - padding - ${#text} ))" ""
-}
-
-draw_box_top() {
-    printf "${CYAN}${CORNER_TL}"
-    printf '%*s' "$BOX_WIDTH" '' | tr ' ' "$HORIZONTAL"
-    printf "${CORNER_TR}${RESET}\n"
-}
-
-draw_box_bottom() {
-    printf "${CYAN}${CORNER_BL}"
-    printf '%*s' "$BOX_WIDTH" '' | tr ' ' "$HORIZONTAL"
-    printf "${CORNER_BR}${RESET}\n"
-}
-
-draw_box_line() {
-    local text="$1"
-    printf "${CYAN}${VERTICAL}${RESET} %s ${CYAN}${VERTICAL}${RESET}\n" \
-        "$(center_text "$text" $((BOX_WIDTH - 2)))"
-}
-
-draw_box_empty() {
-    printf "${CYAN}${VERTICAL}%*s${VERTICAL}${RESET}\n" "$BOX_WIDTH"
-}
-
 # ==========================================
 # PRINT FUNCTIONS
 # ==========================================
 
-print_header() {
+print_welcome() {
     clear
     echo
-    draw_box_top
-    draw_box_empty
-    draw_box_line "ARCH LINUX AUTOMATED SETUP"
-    draw_box_line "Development Environment"
-    draw_box_empty
-    printf "${CYAN}${VERTICAL}${RESET} %s ${CYAN}${VERTICAL}${RESET}\n" \
-        "$(center_text "${GRAY}$(date '+%Y-%m-%d %H:%M')${RESET}" $((BOX_WIDTH - 2)))"
-    draw_box_empty
-    draw_box_bottom
+    echo -e "${MAGENTA}${BOLD}"
+    cat << "EOF"
+        █▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀█
+        █  ARCH AUTOMATED SETUP SCRIPT    █
+        █  ─────────────────────────────  █
+        █  Development Environment        █
+        █▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄█
+EOF
+    echo -e "${RESET}"
+    echo -e "        ${GRAY}$(date '+%Y-%m-%d %H:%M')${RESET}"
     echo
 }
 
@@ -95,13 +52,13 @@ print_section() {
     local title="$1"
     local icon="${2:-$ARROW}"
     echo
-    printf "${MAGENTA}${BOLD}${icon}  %s${RESET}\n" "$title"
-    printf "${CYAN}%*s${RESET}\n" "$BOX_WIDTH" '' | tr ' ' "$HORIZONTAL"
+    printf "  ${MAGENTA}${BOLD}${icon}  %s${RESET}\n" "$title"
+    printf "  ${CYAN}%*s${RESET}\n" "50" '' | tr ' ' "─"
 }
 
 print_step() {
     local msg="$1"
-    printf "  ${CYAN}${BULLET}${RESET} %s ... " "$msg"
+    printf "    ${CYAN}${BULLET}${RESET} %s ... " "$msg"
 }
 
 print_success() {
@@ -120,37 +77,18 @@ print_error() {
     printf "${RED}✗${RESET}\n"
 }
 
-# Spinner for long operations
 spinner_start() {
     local msg="$1"
     local pid="$2"
     local i=0
-    printf "  ${CYAN}%s${RESET} %s " "${SPINNER_FRAMES[0]}" "$msg"
+    printf "    ${CYAN}%s${RESET} %s " "${SPINNER_FRAMES[0]}" "$msg"
     while kill -0 "$pid" 2>/dev/null; do
         i=$(( (i + 1) % ${#SPINNER_FRAMES[@]} ))
-        printf "\r  ${CYAN}%s${RESET} %s " "${SPINNER_FRAMES[$i]}" "$msg"
+        printf "\r    ${CYAN}%s${RESET} %s " "${SPINNER_FRAMES[$i]}" "$msg"
         sleep 0.1
     done
     printf "\r"
 }
-
-# Progress bar for package installation
-progress_bar() {
-    local current="$1"
-    local total="$2"
-    local width=40
-    local filled=$(( current * width / total ))
-    local empty=$(( width - filled ))
-    printf "\r  ${GRAY}[${GREEN}"
-    printf '%*s' "$filled" '' | tr ' ' '█'
-    printf "${GRAY}"
-    printf '%*s' "$empty" '' | tr ' ' '░'
-    printf "] ${WHITE}%d/%d${RESET}" "$current" "$total"
-}
-
-# ==========================================
-# EXECUTION WRAPPERS
-# ==========================================
 
 run_with_spinner() {
     local msg="$1"
@@ -163,38 +101,23 @@ run_with_spinner() {
     wait $pid
     local status=$?
     if [ $status -eq 0 ]; then
-        printf "  ${GREEN}${CHECK}${RESET} %s\n" "$msg"
+        printf "    ${GREEN}${CHECK}${RESET} %s\n" "$msg"
     else
-        printf "  ${RED}✗${RESET} %s ${RED}(failed)${RESET}\n" "$msg"
+        printf "    ${RED}✗${RESET} %s ${RED}(failed)${RESET}\n" "$msg"
         return $status
     fi
-}
-
-confirm() {
-    local msg="$1"
-    printf "\n${YELLOW}${WARN}${RESET} %s [Y/n] " "$msg"
-    read -r response
-    [[ "$response" =~ ^[Yy]?$ ]]
 }
 
 # ==========================================
 # START
 # ==========================================
 
-print_header
+print_welcome
 
-# System update with spinner
+# System update
 print_section "SYSTEM MAINTENANCE" "🔄"
-print_step "Updating pacman databases"
-if run_with_spinner "Synchronizing package databases" sudo pacman -Sy --noconfirm; then
-    print_success
-else
-    print_error
-    exit 1
-fi
-
-print_step "Upgrading system packages"
-if run_with_spinner "Upgrading system" sudo pacman -Su --noconfirm; then
+print_step "Updating system"
+if run_with_spinner "Synchronizing and upgrading" sudo pacman -Syu --noconfirm; then
     print_success
 else
     print_error
@@ -207,12 +130,11 @@ fi
 
 print_section "CORE PACKAGES" "📦"
 
-# Define package groups with descriptions
 declare -A PKG_GROUPS=(
     ["Build Tools"]="git base-devel github-cli gcc gdb cmake ninja clang"
     ["Languages"]="python python-pip nodejs npm maven gradle jdk21-openjdk rust cargo"
     ["Databases"]="postgresql redis sqlite"
-    ["System"]="docker kitty neovim tmux btop fastfetch ripgrep fzf fd bat zoxide eza jq tree curl wget unzip p7zip"
+    ["System"]="docker kitty neovim tmux btop fastfetch ripgrep fzf fd bat zoxide eza jq tree curl wget unzip p7zip flatpak"
     ["Desktop"]="firefox telegram-desktop discord vlc mpv obs-studio gwenview okular libreoffice-fresh"
     ["Network"]="nmap wireshark-qt openssh networkmanager"
     ["Wayland/Hyprland"]="waybar hyprpaper dunst wl-clipboard grim slurp xdg-desktop-portal-hyprland"
@@ -230,20 +152,19 @@ current=0
 
 for group in "${!PKG_GROUPS[@]}"; do
     current=$((current + 1))
-    printf "\n  ${CYAN}${BOLD}%s${RESET} ${GRAY}(%d/%d)${RESET}\n" "$group" "$current" "$total_groups"
+    printf "\n    ${CYAN}${BOLD}%s${RESET} ${GRAY}(%d/%d)${RESET}\n" "$group" "$current" "$total_groups"
     
-    # Parse packages and install
     read -ra pkgs <<< "${PKG_GROUPS[$group]}"
     
     for pkg in "${pkgs[@]}"; do
-        printf "    ${GRAY}Installing ${WHITE}%s${GRAY}...${RESET}" "$pkg"
+        printf "      ${GRAY}Installing ${WHITE}%s${GRAY}...${RESET}" "$pkg"
         if pacman -Q "$pkg" &>/dev/null; then
-            printf "\r    ${YELLOW}${SKIP}${RESET} ${WHITE}%s${GRAY} already installed${RESET}\n" "$pkg"
+            printf "\r      ${YELLOW}${SKIP}${RESET} ${WHITE}%s${GRAY} already installed${RESET}\n" "$pkg"
         else
             if sudo pacman -S --needed --noconfirm "$pkg" >/dev/null 2>&1; then
-                printf "\r    ${GREEN}${CHECK}${RESET} ${WHITE}%s${RESET}\n" "$pkg"
+                printf "\r      ${GREEN}${CHECK}${RESET} ${WHITE}%s${RESET}\n" "$pkg"
             else
-                printf "\r    ${RED}✗${RESET} ${WHITE}%s ${RED}failed${RESET}\n" "$pkg"
+                printf "\r      ${RED}✗${RESET} ${WHITE}%s ${RED}failed${RESET}\n" "$pkg"
             fi
         fi
     done
@@ -275,7 +196,7 @@ for svc in "${SERVICES[@]}"; do
 done
 
 # User groups
-print_step "Adding user to required groups"
+print_step "Adding user to docker and libvirt groups"
 sudo usermod -aG docker,libvirt "$USER"
 print_success
 
@@ -294,7 +215,7 @@ else
 fi
 
 # ==========================================
-# AUR HELPER (YAY)
+# YAY (AUR HELPER)
 # ==========================================
 
 print_section "AUR SETUP" "🔧"
@@ -333,11 +254,11 @@ declare -a AUR_PKGS=(
 
 for pkg in "${AUR_PKGS[@]}"; do
     IFS=':' read -r name desc <<< "$pkg"
-    printf "  ${GRAY}Installing ${WHITE}%s${GRAY} (${desc})...${RESET}" "$name"
+    printf "    ${GRAY}Installing ${WHITE}%s${GRAY} (${desc})...${RESET}" "$name"
     if yay -S --needed --noconfirm "$name" >/dev/null 2>&1; then
-        printf "\r  ${GREEN}${CHECK}${RESET} ${WHITE}%s${RESET}\n" "$name"
+        printf "\r    ${GREEN}${CHECK}${RESET} ${WHITE}%s${RESET}\n" "$name"
     else
-        printf "\r  ${YELLOW}${WARN}${RESET} ${WHITE}%s ${GRAY}(skipped or failed)${RESET}\n" "$name"
+        printf "\r    ${YELLOW}${WARN}${RESET} ${WHITE}%s ${GRAY}(skipped or failed)${RESET}\n" "$name"
     fi
 done
 
@@ -362,11 +283,11 @@ declare -a FLATPAK_APPS=(
 
 for app in "${FLATPAK_APPS[@]}"; do
     IFS=':' read -r id desc <<< "$app"
-    printf "  ${GRAY}Installing ${WHITE}%s${GRAY}...${RESET}" "$desc"
+    printf "    ${GRAY}Installing ${WHITE}%s${GRAY}...${RESET}" "$desc"
     if flatpak install -y flathub "$id" >/dev/null 2>&1; then
-        printf "\r  ${GREEN}${CHECK}${RESET} ${WHITE}%s${RESET}\n" "$desc"
+        printf "\r    ${GREEN}${CHECK}${RESET} ${WHITE}%s${RESET}\n" "$desc"
     else
-        printf "\r  ${YELLOW}${WARN}${RESET} ${WHITE}%s ${GRAY}(skipped)${RESET}\n" "$desc"
+        printf "\r    ${YELLOW}${WARN}${RESET} ${WHITE}%s ${GRAY}(skipped)${RESET}\n" "$desc"
     fi
 done
 
@@ -385,22 +306,22 @@ corepack prepare pnpm@latest --activate >/dev/null 2>&1
 print_success
 
 # ==========================================
-# SUMMARY
+# DONE
 # ==========================================
 
 echo
-draw_box_top
-draw_box_empty
-draw_box_line "✨  SETUP COMPLETE  ✨"
-draw_box_empty
-draw_box_line "Please ${YELLOW}reboot${RESET} or ${YELLOW}log out${RESET}"
-draw_box_line "for group changes to take effect."
-draw_box_empty
-draw_box_bottom
-
+echo -e "${MAGENTA}${BOLD}"
+cat << "EOF"
+        █▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀█
+        █      ✨  SETUP COMPLETE  ✨      █
+        █▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄█
+EOF
+echo -e "${RESET}"
+echo -e "        ${YELLOW}Please reboot or log out${RESET}"
+echo -e "        ${GRAY}for group changes to apply${RESET}"
 echo
-printf "  ${GRAY}Installed packages can be reviewed with:${RESET}\n"
-printf "    ${CYAN}pacman -Qqe${RESET} ${GRAY}(official)${RESET}\n"
-printf "    ${CYAN}yay -Qqe${RESET} ${GRAY}(AUR)${RESET}\n"
-printf "    ${CYAN}flatpak list${RESET} ${GRAY}(Flatpak)${RESET}\n"
+echo -e "  ${GRAY}Quick reference:${RESET}"
+echo -e "    ${CYAN}pacman -Qqe${RESET} ${GRAY}(official packages)${RESET}"
+echo -e "    ${CYAN}yay -Qqe${RESET} ${GRAY}(AUR packages)${RESET}"
+echo -e "    ${CYAN}flatpak list${RESET} ${GRAY}(Flatpak apps)${RESET}"
 echo
