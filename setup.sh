@@ -1,215 +1,406 @@
 #!/bin/bash
 
-set -e
+set -euo pipefail
 
 # ==========================================
-
-# COLOR DEFINITIONS
-
+# UI CONFIGURATION
 # ==========================================
 
+# Colors
 BOLD="\e[1m"
 DIM="\e[2m"
 RESET="\e[0m"
+ITALIC="\e[3m"
 
 CYAN="\e[36m"
 GREEN="\e[32m"
 YELLOW="\e[33m"
 MAGENTA="\e[35m"
 RED="\e[31m"
+BLUE="\e[34m"
+WHITE="\e[97m"
+GRAY="\e[90m"
 
-ICON_START="➜"
-ICON_SUCCESS="✔"
-ICON_SKIP="➟"
-ICON_ALERT="⚠"
+# Symbols (using Unicode box-drawing for cleaner look)
+CORNER_TL="╭"
+CORNER_TR="╮"
+CORNER_BL="╰"
+CORNER_BR="╯"
+HORIZONTAL="─"
+VERTICAL="│"
+ARROW="▸"
+CHECK="✓"
+SKIP="→"
+WARN="!"
+BULLET="•"
+SPINNER_FRAMES=("⠋" "⠙" "⠹" "⠸" "⠼" "⠴" "⠦" "⠧" "⠇" "⠏")
+
+# Dimensions
+TERM_WIDTH=$(tput cols 2>/dev/null || echo 80)
+BOX_WIDTH=$(( TERM_WIDTH > 80 ? 70 : TERM_WIDTH - 10 ))
+
+# ==========================================
+# UTILITY FUNCTIONS
+# ==========================================
+
+center_text() {
+    local text="$1"
+    local width="${2:-$BOX_WIDTH}"
+    local padding=$(( (width - ${#text}) / 2 ))
+    printf "%*s%s%*s" "$padding" "" "$text" "$(( width - padding - ${#text} ))" ""
+}
+
+draw_box_top() {
+    printf "${CYAN}${CORNER_TL}"
+    printf '%*s' "$BOX_WIDTH" '' | tr ' ' "$HORIZONTAL"
+    printf "${CORNER_TR}${RESET}\n"
+}
+
+draw_box_bottom() {
+    printf "${CYAN}${CORNER_BL}"
+    printf '%*s' "$BOX_WIDTH" '' | tr ' ' "$HORIZONTAL"
+    printf "${CORNER_BR}${RESET}\n"
+}
+
+draw_box_line() {
+    local text="$1"
+    printf "${CYAN}${VERTICAL}${RESET} %s ${CYAN}${VERTICAL}${RESET}\n" \
+        "$(center_text "$text" $((BOX_WIDTH - 2)))"
+}
+
+draw_box_empty() {
+    printf "${CYAN}${VERTICAL}%*s${VERTICAL}${RESET}\n" "$BOX_WIDTH"
+}
+
+# ==========================================
+# PRINT FUNCTIONS
+# ==========================================
+
+print_header() {
+    clear
+    echo
+    draw_box_top
+    draw_box_empty
+    draw_box_line "ARCH LINUX AUTOMATED SETUP"
+    draw_box_line "Development Environment"
+    draw_box_empty
+    printf "${CYAN}${VERTICAL}${RESET} %s ${CYAN}${VERTICAL}${RESET}\n" \
+        "$(center_text "${GRAY}$(date '+%Y-%m-%d %H:%M')${RESET}" $((BOX_WIDTH - 2)))"
+    draw_box_empty
+    draw_box_bottom
+    echo
+}
+
+print_section() {
+    local title="$1"
+    local icon="${2:-$ARROW}"
+    echo
+    printf "${MAGENTA}${BOLD}${icon}  %s${RESET}\n" "$title"
+    printf "${CYAN}%*s${RESET}\n" "$BOX_WIDTH" '' | tr ' ' "$HORIZONTAL"
+}
 
 print_step() {
-echo -e "\n${CYAN}${ICON_START}${RESET} ${BOLD}$1${RESET}"
+    local msg="$1"
+    printf "  ${CYAN}${BULLET}${RESET} %s ... " "$msg"
 }
 
 print_success() {
-echo -e "${GREEN}${ICON_SUCCESS} $1${RESET}"
+    printf "${GREEN}${CHECK}${RESET}\n"
 }
 
 print_skip() {
-echo -e "${YELLOW}${ICON_SKIP} $1${RESET}"
+    printf "${YELLOW}${SKIP}${RESET} ${GRAY}(already done)${RESET}\n"
 }
 
-print_welcome() {
-clear
-echo -e "${MAGENTA}${BOLD}"
-cat << "EOF"
-█▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀█
-█  ARCH AUTOMATED SETUP SCRIPT    █
-█▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄█
-EOF
-echo -e "${RESET}"
-echo
+print_warn() {
+    printf "${YELLOW}${WARN}${RESET}\n"
+}
+
+print_error() {
+    printf "${RED}✗${RESET}\n"
+}
+
+# Spinner for long operations
+spinner_start() {
+    local msg="$1"
+    local pid="$2"
+    local i=0
+    printf "  ${CYAN}%s${RESET} %s " "${SPINNER_FRAMES[0]}" "$msg"
+    while kill -0 "$pid" 2>/dev/null; do
+        i=$(( (i + 1) % ${#SPINNER_FRAMES[@]} ))
+        printf "\r  ${CYAN}%s${RESET} %s " "${SPINNER_FRAMES[$i]}" "$msg"
+        sleep 0.1
+    done
+    printf "\r"
+}
+
+# Progress bar for package installation
+progress_bar() {
+    local current="$1"
+    local total="$2"
+    local width=40
+    local filled=$(( current * width / total ))
+    local empty=$(( width - filled ))
+    printf "\r  ${GRAY}[${GREEN}"
+    printf '%*s' "$filled" '' | tr ' ' '█'
+    printf "${GRAY}"
+    printf '%*s' "$empty" '' | tr ' ' '░'
+    printf "] ${WHITE}%d/%d${RESET}" "$current" "$total"
 }
 
 # ==========================================
+# EXECUTION WRAPPERS
+# ==========================================
 
+run_with_spinner() {
+    local msg="$1"
+    shift
+    (
+        "$@" >/dev/null 2>&1
+    ) &
+    local pid=$!
+    spinner_start "$msg" "$pid"
+    wait $pid
+    local status=$?
+    if [ $status -eq 0 ]; then
+        printf "  ${GREEN}${CHECK}${RESET} %s\n" "$msg"
+    else
+        printf "  ${RED}✗${RESET} %s ${RED}(failed)${RESET}\n" "$msg"
+        return $status
+    fi
+}
+
+confirm() {
+    local msg="$1"
+    printf "\n${YELLOW}${WARN}${RESET} %s [Y/n] " "$msg"
+    read -r response
+    [[ "$response" =~ ^[Yy]?$ ]]
+}
+
+# ==========================================
 # START
-
 # ==========================================
 
-print_welcome
+print_header
 
-print_step "Updating system"
-sudo pacman -Syu --noconfirm
-print_success "System updated"
-
-# ==========================================
-
-# OFFICIAL PACKAGES
-
-# ==========================================
-
-print_step "Installing official packages"
-
-sudo pacman -S --needed --noconfirm 
-git base-devel github-cli 
-gcc gdb cmake ninja clang 
-python python-pip 
-nodejs npm 
-maven gradle 
-jdk21-openjdk 
-rust cargo 
-postgresql redis sqlite 
-docker 
-kitty neovim tmux 
-btop fastfetch ripgrep fzf fd bat zoxide eza jq tree 
-curl wget 
-unzip p7zip 
-flatpak 
-firefox telegram-desktop discord 
-vlc mpv obs-studio 
-gwenview okular libreoffice-fresh 
-nmap wireshark-qt 
-waybar hyprpaper dunst 
-wl-clipboard grim slurp 
-xdg-desktop-portal-hyprland 
-pipewire wireplumber 
-thunar dolphin ark 
-ttf-dejavu ttf-liberation noto-fonts noto-fonts-cjk noto-fonts-emoji ttf-jetbrains-mono otf-font-awesome 
-bluez bluez-utils blueman 
-qemu-full virt-manager dnsmasq edk2-ovmf linux-headers 
-android-tools ntfs-3g exfatprogs 
-cups system-config-printer 
-openssh networkmanager brightnessctl playerctl pavucontrol
-
-print_success "Official packages installed"
-
-# ==========================================
-
-# SERVICES
-
-# ==========================================
-
-print_step "Enabling services"
-
-sudo systemctl enable docker
-sudo systemctl enable postgresql
-sudo systemctl enable bluetooth
-sudo systemctl enable cups
-sudo systemctl enable libvirtd
-sudo systemctl enable NetworkManager
-
-sudo systemctl start NetworkManager
-
-sudo usermod -aG docker "$USER"
-sudo usermod -aG libvirt "$USER"
-
-print_success "Services enabled"
-
-# PostgreSQL init (safe check)
-
-if [ ! -f /var/lib/postgres/data/PG_VERSION ]; then
-print_step "Initializing PostgreSQL"
-sudo -iu postgres initdb -D /var/lib/postgres/data
-print_success "PostgreSQL initialized"
+# System update with spinner
+print_section "SYSTEM MAINTENANCE" "🔄"
+print_step "Updating pacman databases"
+if run_with_spinner "Synchronizing package databases" sudo pacman -Sy --noconfirm; then
+    print_success
 else
-print_skip "PostgreSQL already initialized"
+    print_error
+    exit 1
+fi
+
+print_step "Upgrading system packages"
+if run_with_spinner "Upgrading system" sudo pacman -Su --noconfirm; then
+    print_success
+else
+    print_error
+    exit 1
 fi
 
 # ==========================================
-
-# YAY (AUR HELPER)
-
+# OFFICIAL PACKAGES
 # ==========================================
 
-print_step "Installing yay"
+print_section "CORE PACKAGES" "📦"
+
+# Define package groups with descriptions
+declare -A PKG_GROUPS=(
+    ["Build Tools"]="git base-devel github-cli gcc gdb cmake ninja clang"
+    ["Languages"]="python python-pip nodejs npm maven gradle jdk21-openjdk rust cargo"
+    ["Databases"]="postgresql redis sqlite"
+    ["System"]="docker kitty neovim tmux btop fastfetch ripgrep fzf fd bat zoxide eza jq tree curl wget unzip p7zip"
+    ["Desktop"]="firefox telegram-desktop discord vlc mpv obs-studio gwenview okular libreoffice-fresh"
+    ["Network"]="nmap wireshark-qt openssh networkmanager"
+    ["Wayland/Hyprland"]="waybar hyprpaper dunst wl-clipboard grim slurp xdg-desktop-portal-hyprland"
+    ["Audio"]="pipewire wireplumber pavucontrol playerctl"
+    ["Filesystem"]="thunar dolphin ark"
+    ["Fonts"]="ttf-dejavu ttf-liberation noto-fonts noto-fonts-cjk noto-fonts-emoji ttf-jetbrains-mono otf-font-awesome"
+    ["Bluetooth"]="bluez bluez-utils blueman brightnessctl"
+    ["Virtualization"]="qemu-full virt-manager dnsmasq edk2-ovmf linux-headers"
+    ["Hardware"]="android-tools ntfs-3g exfatprogs"
+    ["Printing"]="cups system-config-printer"
+)
+
+total_groups=${#PKG_GROUPS[@]}
+current=0
+
+for group in "${!PKG_GROUPS[@]}"; do
+    current=$((current + 1))
+    printf "\n  ${CYAN}${BOLD}%s${RESET} ${GRAY}(%d/%d)${RESET}\n" "$group" "$current" "$total_groups"
+    
+    # Parse packages and install
+    read -ra pkgs <<< "${PKG_GROUPS[$group]}"
+    
+    for pkg in "${pkgs[@]}"; do
+        printf "    ${GRAY}Installing ${WHITE}%s${GRAY}...${RESET}" "$pkg"
+        if pacman -Q "$pkg" &>/dev/null; then
+            printf "\r    ${YELLOW}${SKIP}${RESET} ${WHITE}%s${GRAY} already installed${RESET}\n" "$pkg"
+        else
+            if sudo pacman -S --needed --noconfirm "$pkg" >/dev/null 2>&1; then
+                printf "\r    ${GREEN}${CHECK}${RESET} ${WHITE}%s${RESET}\n" "$pkg"
+            else
+                printf "\r    ${RED}✗${RESET} ${WHITE}%s ${RED}failed${RESET}\n" "$pkg"
+            fi
+        fi
+    done
+done
+
+# ==========================================
+# SERVICES
+# ==========================================
+
+print_section "SYSTEM SERVICES" "⚙️"
+
+declare -a SERVICES=(
+    "docker:Container runtime"
+    "postgresql:Database server"
+    "bluetooth:Wireless connectivity"
+    "cups:Printing system"
+    "libvirtd:Virtualization daemon"
+    "NetworkManager:Network connectivity"
+)
+
+for svc in "${SERVICES[@]}"; do
+    IFS=':' read -r name desc <<< "$svc"
+    print_step "Enabling $desc ($name)"
+    if sudo systemctl enable --now "$name" >/dev/null 2>&1; then
+        print_success
+    else
+        print_warn
+    fi
+done
+
+# User groups
+print_step "Adding user to required groups"
+sudo usermod -aG docker,libvirt "$USER"
+print_success
+
+# PostgreSQL init
+echo
+print_step "Checking PostgreSQL initialization"
+if [ ! -f /var/lib/postgres/data/PG_VERSION ]; then
+    echo
+    if run_with_spinner "Initializing PostgreSQL cluster" sudo -iu postgres initdb -D /var/lib/postgres/data; then
+        :
+    else
+        print_error
+    fi
+else
+    print_skip
+fi
+
+# ==========================================
+# AUR HELPER (YAY)
+# ==========================================
+
+print_section "AUR SETUP" "🔧"
 
 if ! command -v yay &>/dev/null; then
-tmpdir=$(mktemp -d)
-git clone https://aur.archlinux.org/yay.git "$tmpdir/yay"
-(
-cd "$tmpdir/yay"
-makepkg -si --noconfirm
-)
-rm -rf "$tmpdir"
-print_success "yay installed"
+    print_step "Building yay from AUR"
+    tmpdir=$(mktemp -d)
+    if git clone --depth=1 https://aur.archlinux.org/yay.git "$tmpdir/yay" >/dev/null 2>&1; then
+        (
+            cd "$tmpdir/yay"
+            makepkg -si --noconfirm >/dev/null 2>&1
+        )
+        rm -rf "$tmpdir"
+        print_success
+    else
+        print_error
+    fi
 else
-print_skip "yay already installed"
+    print_skip
 fi
 
 # ==========================================
-
 # AUR PACKAGES
-
 # ==========================================
 
-print_step "Installing AUR packages"
+print_section "AUR PACKAGES" "🎁"
 
-yay -S --needed --noconfirm 
-visual-studio-code-bin 
-google-chrome 
-postman-bin 
-docker-desktop 
-jetbrains-toolbox 
-burpsuite
+declare -a AUR_PKGS=(
+    "visual-studio-code-bin:VS Code"
+    "google-chrome:Chrome browser"
+    "postman-bin:API testing"
+    "docker-desktop:Container GUI"
+    "jetbrains-toolbox:IDE manager"
+    "burpsuite:Security testing"
+)
 
-print_success "AUR packages installed"
+for pkg in "${AUR_PKGS[@]}"; do
+    IFS=':' read -r name desc <<< "$pkg"
+    printf "  ${GRAY}Installing ${WHITE}%s${GRAY} (${desc})...${RESET}" "$name"
+    if yay -S --needed --noconfirm "$name" >/dev/null 2>&1; then
+        printf "\r  ${GREEN}${CHECK}${RESET} ${WHITE}%s${RESET}\n" "$name"
+    else
+        printf "\r  ${YELLOW}${WARN}${RESET} ${WHITE}%s ${GRAY}(skipped or failed)${RESET}\n" "$name"
+    fi
+done
 
 # ==========================================
-
 # FLATPAK
-
 # ==========================================
 
-print_step "Setting up Flatpak"
+print_section "FLATPAK APPLICATIONS" "📲"
 
+print_step "Configuring Flathub repository"
 if ! flatpak remotes | grep -q flathub; then
-sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+    sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo >/dev/null 2>&1
+    print_success
+else
+    print_skip
 fi
 
-print_step "Installing Flatpak apps"
+declare -a FLATPAK_APPS=(
+    "cc.arduino.IDE2:Arduino IDE 2"
+    "com.portswigger.BurpSuite:Burp Suite"
+)
 
-flatpak install -y flathub 
-cc.arduino.IDE2 
-com.portswigger.BurpSuite
-
-print_success "Flatpak apps installed"
+for app in "${FLATPAK_APPS[@]}"; do
+    IFS=':' read -r id desc <<< "$app"
+    printf "  ${GRAY}Installing ${WHITE}%s${GRAY}...${RESET}" "$desc"
+    if flatpak install -y flathub "$id" >/dev/null 2>&1; then
+        printf "\r  ${GREEN}${CHECK}${RESET} ${WHITE}%s${RESET}\n" "$desc"
+    else
+        printf "\r  ${YELLOW}${WARN}${RESET} ${WHITE}%s ${GRAY}(skipped)${RESET}\n" "$desc"
+    fi
+done
 
 # ==========================================
-
 # NODE TOOLS
-
 # ==========================================
 
-print_step "Configuring Node.js"
+print_section "NODE.JS ECOSYSTEM" "⬢"
 
-corepack enable
-corepack prepare pnpm@latest --activate
+print_step "Enabling Corepack"
+corepack enable >/dev/null 2>&1
+print_success
 
-print_success "pnpm enabled via Corepack"
+print_step "Preparing pnpm"
+corepack prepare pnpm@latest --activate >/dev/null 2>&1
+print_success
 
 # ==========================================
-
-# DONE
-
+# SUMMARY
 # ==========================================
 
 echo
-echo -e "${GREEN}${BOLD}SETUP COMPLETE${RESET}"
-echo -e "${YELLOW}Please reboot or log out for group changes to apply${RESET}"
+draw_box_top
+draw_box_empty
+draw_box_line "✨  SETUP COMPLETE  ✨"
+draw_box_empty
+draw_box_line "Please ${YELLOW}reboot${RESET} or ${YELLOW}log out${RESET}"
+draw_box_line "for group changes to take effect."
+draw_box_empty
+draw_box_bottom
+
+echo
+printf "  ${GRAY}Installed packages can be reviewed with:${RESET}\n"
+printf "    ${CYAN}pacman -Qqe${RESET} ${GRAY}(official)${RESET}\n"
+printf "    ${CYAN}yay -Qqe${RESET} ${GRAY}(AUR)${RESET}\n"
+printf "    ${CYAN}flatpak list${RESET} ${GRAY}(Flatpak)${RESET}\n"
+echo
